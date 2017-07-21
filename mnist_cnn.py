@@ -6,26 +6,35 @@ import cntk
 import time
 import sys
 from ut import unittest as mnist_unittest
-cntk.cntk_py.set_fixed_random_seed(1)
 mnist = mnist_unittest(__author__)
 training_set = numpy.array(mnist.getTrainingSet(), dtype=float32)
 test_set = numpy.array(mnist.getTestSet(), dtype=float32)
 
 x = cntk.input_variable((1,28,28))
 y = cntk.input_variable(10)
+# def create_model(features):
+# 	with cntk.layers.default_options(init=cntk.glorot_uniform(), activation=cntk.relu):
+# 		h = features
+# 		h = cntk.layers.Convolution2D(filter_shape=(5,5), num_filters=8, strides=(2,2), pad=True, name='layer1')(h)
+# 		h = cntk.layers.Convolution2D(filter_shape=(5,5), num_filters=16, strides=(2,2), pad=True, name='layer2')(h)
+# 		res = cntk.layers.Dense(10, activation=None, name='layer3')(h)
+# 		return res
+
 def create_model(features):
-	with cntk.layers.default_options(init=cntk.glorot_uniform(), activation=cntk.relu):
+	with cntk.layers.default_options(init = cntk.layers.glorot_uniform(), activation = cntk.relu):
 		h = features
-		h = cntk.layers.Convolution2D(filter_shape=(5,5), num_filters=8, strides=(2,2), pad=True, name='layer1')(h)
-		h = cntk.layers.Convolution2D(filter_shape=(5,5), num_filters=16, strides=(2,2), pad=True, name='layer2')(h)
-		res = cntk.layers.Dense(10, activation=None, name='layer3')(h)
-		return res
+		h = cntk.layers.Convolution2D(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True, name="first_conv")(h)
+		h = cntk.layers.MaxPooling(filter_shape=(2,2), strides=(2,2), name="first_max")(h)
+		h = cntk.layers.Convolution2D(filter_shape=(5,5), num_filters=16, strides=(1,1), pad=True, name="second_conv")(h)
+		h = cntk.layers.MaxPooling(filter_shape=(3,3), strides=(3,3), name="second_max")(h)
+		r = cntk.layers.Dense(10, activation = None, name="classify")(h)
+		return r
 
 cnn = create_model(x)
 cnn = cnn(x/255)
 loss = cntk.cross_entropy_with_softmax(cnn, y)
 errs = cntk.classification_error(cnn, y)
-trainer = cntk.Trainer(cnn, (loss, errs), [cntk.sgd(cnn.parameters, cntk.learning_rate_schedule(0.03, cntk.UnitType.minibatch))])
+trainer = cntk.Trainer(cnn, (loss, errs), [cntk.sgd(cnn.parameters, cntk.learning_rate_schedule(0.0105, cntk.UnitType.minibatch))])
 count = 0
 begin_time = time.time()
 for data in training_set:
@@ -34,9 +43,8 @@ for data in training_set:
 	print("\r%.2f%%" % (count/len(training_set)*100), file=sys.stderr, end="")
 print("")
 print("finish training, spent " + str(int(time.time()-begin_time)) + "s")
-print(cnn.layer3.b.value)
+#print(cnn.layer3.b.value)
 out = cntk.softmax(cnn)
-time.sleep(1)
 res_mnist = []
 for testcase in test_set:
 	#res = out.eval(numpy.array(testcase).reshape(1, 28, 28))
