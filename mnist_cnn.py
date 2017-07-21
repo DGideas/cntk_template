@@ -6,7 +6,7 @@ import cntk
 import time
 import sys
 from ut import unittest as mnist_unittest
-
+cntk.cntk_py.set_fixed_random_seed(1)
 mnist = mnist_unittest(__author__)
 training_set = numpy.array(mnist.getTrainingSet(), dtype=float32)
 test_set = numpy.array(mnist.getTestSet(), dtype=float32)
@@ -25,7 +25,7 @@ cnn = create_model(x)
 cnn = cnn(x/255)
 loss = cntk.cross_entropy_with_softmax(cnn, y)
 errs = cntk.classification_error(cnn, y)
-trainer = cntk.Trainer(cnn, (loss, errs), [cntk.sgd(cnn.parameters, cntk.learning_rate_schedule(0.2, cntk.UnitType.minibatch))])
+trainer = cntk.Trainer(cnn, (loss, errs), [cntk.sgd(cnn.parameters, cntk.learning_rate_schedule(0.03, cntk.UnitType.minibatch))])
 count = 0
 begin_time = time.time()
 for data in training_set:
@@ -34,7 +34,7 @@ for data in training_set:
 	print("\r%.2f%%" % (count/len(training_set)*100), file=sys.stderr, end="")
 print("")
 print("finish training, spent " + str(int(time.time()-begin_time)) + "s")
-
+print(cnn.layer3.b.value)
 out = cntk.softmax(cnn)
 time.sleep(1)
 res_mnist = []
@@ -42,5 +42,6 @@ for testcase in test_set:
 	#res = out.eval(numpy.array(testcase).reshape(1, 28, 28))
 	res = out.eval({x: numpy.array(testcase, dtype=float32).reshape(1, 28, 28)})
 	ans = numpy.argmax(res)
+	print(ans, end="")
 	res_mnist.append(ans)
 mnist.putAnswer(res_mnist)
